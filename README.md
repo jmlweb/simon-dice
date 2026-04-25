@@ -2,17 +2,20 @@
 
 > **El clásico juego de eliminación para grupos — ahora en tu navegador, con voz.**
 
-Simón Dice es una versión digital del juego de toda la vida, diseñada para partidas en grupo. Con reconocimiento de voz en español, efectos de sonido generados en tiempo real y una interfaz limpia pensada para móvil, es el entretenimiento perfecto para reuniones, fiestas o actividades en clase.
+Simón Dice es una versión digital del juego de toda la vida, diseñada para partidas en grupo. Con reconocimiento de voz en **6 idiomas**, efectos de sonido generados en tiempo real y una interfaz limpia pensada para móvil, es el entretenimiento perfecto para reuniones, fiestas o actividades en clase.
 
 ---
 
 ## ✨ Características
 
+### 🌍 Multidioma
+Disponible en **inglés, francés, japonés, español, italiano y chino**. El idioma se autodetecta a partir del navegador y se puede cambiar manualmente desde la pantalla de inicio. La elección se recuerda entre sesiones (`localStorage`). Las traducciones se cargan dinámicamente desde ficheros JSON en `public/locales/`, así que añadir un idioma nuevo es solo cuestión de crear otro JSON.
+
 ### 🗣️ Control por voz
-El juego escucha tus respuestas. Di en voz alta cuántos jugadores quedan y el juego avanzará automáticamente — sin tocar la pantalla. El reconocimiento de voz funciona en español (es-ES) y entiende tanto números como palabras (*"tres"*, *"siete"*, *"doce"*).
+El juego escucha tus respuestas. Di en voz alta cuántos jugadores quedan y el juego avanzará automáticamente — sin tocar la pantalla. El reconocimiento de voz funciona en los 6 idiomas soportados y entiende tanto cifras (*"3"*, *"12"*) como palabras (*"three"*, *"trois"*, *"siete"*, *"二十一"*).
 
 ### 📢 Narración completa
-Todas las instrucciones se leen en voz alta mediante síntesis de voz. El juego anuncia las acciones, pregunta cuántos quedan y proclama al ganador — ideal para que todo el grupo esté al tanto sin mirar la pantalla.
+Todas las instrucciones se leen en voz alta mediante síntesis de voz, en el idioma seleccionado. El juego anuncia las acciones, pregunta cuántos quedan y proclama al ganador — ideal para que todo el grupo esté al tanto sin mirar la pantalla. La selección de voz prioriza las versiones de mayor calidad disponibles en el sistema (Google, Enhanced, Premium, Neural, Siri…).
 
 ### 🎵 Efectos de sonido generados al vuelo
 Sin archivos de audio externos. Los sonidos se generan en tiempo real con la Web Audio API:
@@ -25,8 +28,8 @@ Sin archivos de audio externos. Los sonidos se generan en tiempo real con la Web
 ### 👆 Doble sistema de entrada
 ¿El micrófono no funciona o el entorno es ruidoso? Los botones numéricos en pantalla son siempre una alternativa. El juego acepta ambas formas de entrada simultáneamente y usa la primera que llegue.
 
-### 🎯 27 acciones diferentes
-Tocar la nariz, aplaudir, dar saltos, girar sobre sí mismo, cruzar los brazos, sonreír… El juego tiene 27 acciones físicas distintas y garantiza que no se repita la misma acción dos veces seguidas.
+### 🎯 25 acciones por idioma
+Tocar la nariz, aplaudir, dar saltos, girar sobre sí mismo, cruzar los brazos, sonreír… Cada idioma tiene 25 acciones físicas adaptadas culturalmente, y el juego garantiza que no se repita la misma acción dos veces seguidas.
 
 ### 👥 De 1 a 30 jugadores
 Configura el número de participantes al inicio y el juego se adapta. Las eliminaciones se registran ronda a ronda hasta que queda un único ganador (o nadie, si todos son eliminados a la vez).
@@ -58,6 +61,7 @@ La interfaz se adapta a cualquier tamaño de pantalla. Los botones están optimi
 | Voz (entrada) | Web Speech API |
 | Voz (salida) | Web Speech Synthesis API |
 | Audio | Web Audio API |
+| i18n | Custom (Context + JSON dinámico) |
 | Estilos | CSS Modules + Variables CSS |
 | Gestor de paquetes | pnpm |
 
@@ -105,6 +109,19 @@ pnpm typecheck
 | Botones numéricos | ✅ | ✅ | ✅ | ✅ |
 
 El juego funciona en todos los navegadores modernos. En aquellos sin soporte de reconocimiento de voz, la entrada manual por botones está siempre disponible.
+
+---
+
+## 🌐 Añadir un idioma
+
+1. Crear `public/locales/<código>.json` copiando la estructura de uno existente (por ejemplo `en.json`).
+2. Traducir las claves de `ui` y `speech`, las 25 acciones y el diccionario `numberWords` (palabra hablada → número de 0 a 30).
+3. Añadir el código en `src/i18n/types.ts`:
+   - `Locale`, `SUPPORTED_LOCALES`
+   - `SPEECH_TAGS` (BCP-47 para Web Speech, p. ej. `de-DE`)
+   - `LOCALE_NAMES` (nombre nativo para el selector)
+
+No hace falta tocar nada más: el provider carga el JSON de forma perezosa y el selector se actualiza solo.
 
 ---
 
