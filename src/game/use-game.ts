@@ -8,6 +8,7 @@ import {
 } from '../audio/sound-effects'
 import { isSpeechRecognitionSupported, useListen } from '../audio/use-listen'
 import { useSpeech } from '../audio/use-speech'
+import { SPEECH_TAGS, useI18n } from '../i18n'
 import { GamePhase, type EndOutcome, type Round } from '../shared/types'
 import { buildPhrase, pickRound } from './actions'
 import { parseNumber } from './number-parser'
@@ -39,12 +40,20 @@ const INITIAL: State = {
 const ABORT = Symbol('abort')
 
 export const useGame = () => {
+  const { locale, translations } = useI18n()
+  const speechTag = SPEECH_TAGS[locale]
+
   const [state, setState] = useState<State>(INITIAL)
-  const { speak, cancel: cancelSpeech } = useSpeech()
-  const { listen, stop: stopListen } = useListen()
+  const { speak, cancel: cancelSpeech } = useSpeech(speechTag)
+  const { listen, stop: stopListen } = useListen(speechTag)
 
   const sessionRef = useRef(0)
   const manualAnswerRef = useRef<((n: number | typeof ABORT) => void) | null>(null)
+  const translationsRef = useRef(translations)
+
+  useEffect(() => {
+    translationsRef.current = translations
+  }, [translations])
 
   const isAlive = (session: number) => sessionRef.current === session
 
@@ -71,11 +80,12 @@ export const useGame = () => {
       for (let attempt = 0; attempt < VOICE_RETRY_LIMIT; attempt++) {
         if (!isAlive(session)) return null
 
+        const numberWords = translationsRef.current.numberWords
         const voicePromise: Promise<number | null> = isSpeechRecognitionSupported
           ? listen().then((alts) => {
               if (!alts) return null
               for (const transcript of alts) {
-                const n = parseNumber(transcript, max)
+                const n = parseNumber(transcript, max, numberWords)
                 if (n !== null) return n
               }
               return null
@@ -96,13 +106,13 @@ export const useGame = () => {
         }
 
         if (attempt < VOICE_RETRY_LIMIT - 1 && isSpeechRecognitionSupported) {
-          setState((s) => ({ ...s, voiceFeedback: 'No te he entendido. ¿Cuántos jugadores quedan?' }))
-          await speak('No te he entendido. ¿Cuántos jugadores quedan?')
+          const msg = translationsRef.current.speech.notUnderstood
+          setState((s) => ({ ...s, voiceFeedback: msg }))
+          await speak(msg)
           if (!isAlive(session)) return null
         }
       }
 
-      // Fallback final: solo botones manuales
       stopListen()
       setState((s) => ({ ...s, voiceListening: false }))
       const manualOnly = await new Promise<number | typeof ABORT>((resolve) => {
@@ -134,15 +144,19 @@ export const useGame = () => {
       })
 
       playGameStart()
-      await speak(
+      const startMessage =
         initialPlayers === 1
-          ? 'El juego empieza. Hay un solo jugador.'
-          : `El juego empieza. Hay ${initialPlayers} jugadores.`,
-      )
+          ? translationsRef.current.speech.gameStartSingle
+          : translationsRef.current.speech.gameStartPlural.replace(
+              '{n}',
+              String(initialPlayers),
+            )
+      await speak(startMessage)
       if (!isAlive(session)) return
 
       while (players > 1) {
-        const round = pickRound(previousAction)
+        const t = translationsRef.current
+        const round = pickRound(t.actions, previousAction)
         previousAction = round.action
 
         setState((s) => ({
@@ -152,14 +166,14 @@ export const useGame = () => {
           voiceFeedback: null,
         }))
         playRoundTick()
-        await speak(buildPhrase(round.action, round.isSimonSays))
+        await speak(buildPhrase(round.action, round.isSimonSays, t.speech.simonSays))
         if (!isAlive(session)) return
 
         setState((s) => ({ ...s, phase: GamePhase.WAITING }))
         if (!(await wait(ACTION_WAIT_MS, session))) return
 
         setState((s) => ({ ...s, phase: GamePhase.ASKING }))
-        await speak('¿Cuántos jugadores quedan?')
+        await speak(translationsRef.current.speech.askRemaining)
         if (!isAlive(session)) return
 
         setState((s) => ({
@@ -193,11 +207,11 @@ export const useGame = () => {
         outcome,
         voiceListening: false,
       }))
-      await speak(
+      const ending =
         outcome === 'winner'
-          ? '¡Tenemos un ganador! Fin de la partida.'
-          : 'Nadie ha quedado en pie. Fin de la partida.',
-      )
+          ? translationsRef.current.speech.winnerEnding
+          : translationsRef.current.speech.noWinnerEnding
+      await speak(ending)
     },
     [askForAnswer, speak],
   )

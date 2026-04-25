@@ -16,6 +16,40 @@
   text-align: center;
 }
 
+.languageRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.languageLabel {
+  font-size: 0.85rem;
+  color: var(--fg-2);
+}
+
+.languageSelect {
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--fg-0);
+  background: var(--bg-0);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.languageSelect:focus {
+  border-color: var(--accent-2);
+  outline: none;
+}
+
+.languageSelect:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .title {
   margin: 0 0 8px;
   font-size: clamp(2.5rem, 6vw, 3.5rem);

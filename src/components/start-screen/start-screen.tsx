@@ -1,5 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { isSpeechRecognitionSupported } from '../../audio/use-listen'
+import {
+  interpolateJsx,
+  LOCALE_NAMES,
+  SUPPORTED_LOCALES,
+  useI18n,
+  type Locale,
+} from '../../i18n'
 import styles from './start-screen.module.css'
 
 type Props = {
@@ -7,6 +14,7 @@ type Props = {
 }
 
 export const StartScreen = ({ onStart }: Props) => {
+  const { t, translations, locale, setLocale } = useI18n()
   const [value, setValue] = useState('4')
   const trimmed = value.trim()
   const parsed = Number(trimmed)
@@ -21,16 +29,37 @@ export const StartScreen = ({ onStart }: Props) => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.card}>
+        <div className={styles.languageRow}>
+          <label className={styles.languageLabel} htmlFor="language">
+            {t('ui.languageLabel')}
+          </label>
+          <select
+            id="language"
+            className={styles.languageSelect}
+            value={locale}
+            onChange={(e) => setLocale(e.target.value as Locale)}
+          >
+            {SUPPORTED_LOCALES.map((l) => (
+              <option key={l} value={l}>
+                {LOCALE_NAMES[l]}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <h1 className={styles.title}>
-          <span className={styles.titleAccent}>Simón</span> dice
+          <span className={styles.titleAccent}>{translations.ui.titleAccent}</span>{' '}
+          {t('ui.title')}
         </h1>
         <p className={styles.subtitle}>
-          Escucha bien. Solo haz lo que diga <strong>Simón</strong>.
+          {interpolateJsx(translations.ui.subtitle, {
+            strong: <strong>{translations.ui.titleAccent}</strong>,
+          })}
         </p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.label} htmlFor="players">
-            ¿Cuántos jugadores hay?
+            {t('ui.playersLabel')}
           </label>
           <input
             id="players"
@@ -43,20 +72,17 @@ export const StartScreen = ({ onStart }: Props) => {
             onChange={(e) => setValue(e.target.value)}
             autoFocus
           />
-          <button
-            type="submit"
-            className={styles.button}
-            disabled={!isValid}
-          >
-            Comenzar
+          <button type="submit" className={styles.button} disabled={!isValid}>
+            {t('ui.startButton')}
           </button>
         </form>
 
         {!isSpeechRecognitionSupported && (
           <p className={styles.warning}>
-            ⚠️ Tu navegador no soporta reconocimiento de voz. Podrás jugar igualmente
-            usando los botones que aparecerán durante la partida. Para una experiencia
-            completa, abre el juego en <strong>Chrome</strong> o <strong>Edge</strong>.
+            {interpolateJsx(translations.ui.voiceWarning, {
+              chrome: <strong>Chrome</strong>,
+              edge: <strong>Edge</strong>,
+            })}
           </p>
         )}
       </div>

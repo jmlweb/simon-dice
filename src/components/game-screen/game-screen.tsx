@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { GamePhase, type Round } from '../../shared/types'
 import styles from './game-screen.module.css'
 
@@ -12,16 +13,6 @@ type Props = {
   onEndGame: () => void
 }
 
-const phaseLabel: Record<GamePhase, string> = {
-  [GamePhase.IDLE]: '',
-  [GamePhase.STARTING]: 'Preparando partida…',
-  [GamePhase.ANNOUNCING]: 'Atento…',
-  [GamePhase.WAITING]: '',
-  [GamePhase.ASKING]: '¿Cuántos quedan?',
-  [GamePhase.LISTENING]: 'Te escucho…',
-  [GamePhase.ENDED]: '',
-}
-
 export const GameScreen = ({
   phase,
   playersLeft,
@@ -32,9 +23,22 @@ export const GameScreen = ({
   onSubmitRemaining,
   onEndGame,
 }: Props) => {
-  const showButtons =
-    phase === GamePhase.LISTENING || phase === GamePhase.ASKING
+  const { t, translations } = useI18n()
+
+  const phaseLabel: Record<GamePhase, string> = {
+    [GamePhase.IDLE]: '',
+    [GamePhase.STARTING]: t('ui.phasePreparing'),
+    [GamePhase.ANNOUNCING]: t('ui.phaseAnnouncing'),
+    [GamePhase.WAITING]: '',
+    [GamePhase.ASKING]: t('ui.phaseAsking'),
+    [GamePhase.LISTENING]: t('ui.phaseListening'),
+    [GamePhase.ENDED]: '',
+  }
+
+  const showButtons = phase === GamePhase.LISTENING || phase === GamePhase.ASKING
   const buttonsRange = Array.from({ length: playersLeft + 1 }, (_, i) => i)
+  const counterUnit =
+    playersLeft === 1 ? translations.ui.playerSingular : translations.ui.playerPlural
 
   return (
     <div className={styles.wrapper}>
@@ -42,7 +46,7 @@ export const GameScreen = ({
         <div className={styles.counter}>
           <span className={styles.counterValue}>{playersLeft}</span>
           <span className={styles.counterLabel}>
-            {playersLeft === 1 ? 'jugador' : 'jugadores'} de {initialPlayers}
+            {counterUnit} {t('ui.of')} {initialPlayers}
           </span>
         </div>
         <div className={styles.headerRight}>
@@ -53,9 +57,9 @@ export const GameScreen = ({
             type="button"
             className={styles.endButton}
             onClick={onEndGame}
-            aria-label="Terminar partida"
+            aria-label={t('ui.endButtonAria')}
           >
-            Terminar partida
+            {t('ui.endButton')}
           </button>
         </div>
       </header>
@@ -64,7 +68,9 @@ export const GameScreen = ({
         {round && phase === GamePhase.ANNOUNCING ? (
           <div className={styles.phrase} data-active="true">
             <div className={styles.action}>
-              {round.isSimonSays ? `Simón dice ${round.action}` : round.action}
+              {round.isSimonSays
+                ? translations.speech.simonSays.replace('{action}', round.action)
+                : round.action}
             </div>
           </div>
         ) : (
@@ -73,18 +79,14 @@ export const GameScreen = ({
           </div>
         )}
 
-        {voiceFeedback && (
-          <p className={styles.voiceFeedback}>{voiceFeedback}</p>
-        )}
+        {voiceFeedback && <p className={styles.voiceFeedback}>{voiceFeedback}</p>}
       </main>
 
       <footer className={styles.footer}>
         {showButtons && (
           <>
             <p className={styles.helpText}>
-              {voiceListening
-                ? 'Di cuántos quedan o pulsa un botón'
-                : 'Pulsa cuántos jugadores quedan'}
+              {voiceListening ? t('ui.helpVoice') : t('ui.helpManual')}
             </p>
             <div className={styles.buttons}>
               {buttonsRange.map((n) => (

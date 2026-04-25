@@ -38,9 +38,14 @@ const getCtor = (): SpeechRecognitionCtor | null => {
 
 export const isSpeechRecognitionSupported = getCtor() !== null
 
-export const useListen = () => {
+export const useListen = (lang: string) => {
   const recRef = useRef<SpeechRecognitionLike | null>(null)
   const resolveRef = useRef<((value: string[] | null) => void) | null>(null)
+  const langRef = useRef(lang)
+
+  useEffect(() => {
+    langRef.current = lang
+  }, [lang])
 
   useEffect(
     () => () => {
@@ -81,7 +86,7 @@ export const useListen = () => {
         }
       }
       const rec = new Ctor()
-      rec.lang = 'es-ES'
+      rec.lang = langRef.current
       rec.continuous = false
       rec.interimResults = false
       rec.maxAlternatives = 5
