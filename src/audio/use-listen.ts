@@ -13,8 +13,12 @@ type SpeechRecognitionLike = EventTarget & {
   onend: (() => void) | null
 }
 
+type SpeechRecognitionAlternativeLike = { transcript: string }
+type SpeechRecognitionResultLike = ArrayLike<SpeechRecognitionAlternativeLike> & {
+  isFinal: boolean
+}
 type SpeechRecognitionEventLike = {
-  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>
+  results: ArrayLike<SpeechRecognitionResultLike>
 }
 
 type SpeechRecognitionErrorEventLike = {
@@ -36,7 +40,7 @@ export const isSpeechRecognitionSupported = getCtor() !== null
 
 export const useListen = () => {
   const recRef = useRef<SpeechRecognitionLike | null>(null)
-  const resolveRef = useRef<((value: string | null) => void) | null>(null)
+  const resolveRef = useRef<((value: string[] | null) => void) | null>(null)
 
   useEffect(
     () => () => {
@@ -64,11 +68,11 @@ export const useListen = () => {
     recRef.current = null
   }, [])
 
-  const listen = useCallback((): Promise<string | null> => {
+  const listen = useCallback((): Promise<string[] | null> => {
     const Ctor = getCtor()
     if (!Ctor) return Promise.resolve(null)
 
-    return new Promise<string | null>((resolve) => {
+    return new Promise<string[] | null>((resolve) => {
       if (recRef.current) {
         try {
           recRef.current.abort()
@@ -80,10 +84,10 @@ export const useListen = () => {
       rec.lang = 'es-ES'
       rec.continuous = false
       rec.interimResults = false
-      rec.maxAlternatives = 3
+      rec.maxAlternatives = 5
 
       let settled = false
-      const settle = (value: string | null) => {
+      const settle = (value: string[] | null) => {
         if (settled) return
         settled = true
         resolveRef.current = null
@@ -92,11 +96,19 @@ export const useListen = () => {
       }
 
       rec.onresult = (event) => {
-        const transcripts: string[] = []
+        const candidates: string[] = []
+        const seen = new Set<string>()
         for (let i = 0; i < event.results.length; i++) {
-          transcripts.push(event.results[i][0].transcript)
+          const result = event.results[i]
+          for (let j = 0; j < result.length; j++) {
+            const transcript = result[j]?.transcript?.trim()
+            if (transcript && !seen.has(transcript)) {
+              seen.add(transcript)
+              candidates.push(transcript)
+            }
+          }
         }
-        settle(transcripts.join(' ').trim())
+        settle(candidates.length > 0 ? candidates : null)
       }
       rec.onerror = () => settle(null)
       rec.onend = () => settle(null)

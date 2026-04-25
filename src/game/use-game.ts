@@ -72,7 +72,14 @@ export const useGame = () => {
         if (!isAlive(session)) return null
 
         const voicePromise: Promise<number | null> = isSpeechRecognitionSupported
-          ? listen().then((t) => (t ? parseNumber(t, max) : null))
+          ? listen().then((alts) => {
+              if (!alts) return null
+              for (const transcript of alts) {
+                const n = parseNumber(transcript, max)
+                if (n !== null) return n
+              }
+              return null
+            })
           : new Promise(() => {})
 
         const manualPromise = new Promise<number | typeof ABORT>((resolve) => {
