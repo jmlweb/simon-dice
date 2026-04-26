@@ -33,6 +33,12 @@
     "winnerEnding": "We have a winner! Game over.",
     "noWinnerEnding": "Nobody is left standing. Game over."
   },
+  "voiceErrors": {
+    "micDenied": "Microphone permission denied. Tap the buttons to answer.",
+    "micUnavailable": "No microphone detected. Tap the buttons to answer.",
+    "network": "The voice recognizer needs internet. Tap the buttons.",
+    "heardAs": "I heard: \"{transcript}\". Tap a button if I got it wrong."
+  },
   "actions": [
     "touch your nose",
     "touch your left ear",

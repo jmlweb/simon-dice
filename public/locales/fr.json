@@ -33,6 +33,12 @@
     "winnerEnding": "Nous avons un gagnant ! Fin de la partie.",
     "noWinnerEnding": "Personne n'est resté debout. Fin de la partie."
   },
+  "voiceErrors": {
+    "micDenied": "Permission du microphone refusée. Appuie sur les boutons pour répondre.",
+    "micUnavailable": "Aucun microphone détecté. Appuie sur les boutons pour répondre.",
+    "network": "La reconnaissance vocale a besoin d'internet. Appuie sur les boutons.",
+    "heardAs": "J'ai entendu : « {transcript} ». Appuie sur un bouton si je me suis trompé."
+  },
   "actions": [
     "touche ton nez",
     "touche ton oreille gauche",

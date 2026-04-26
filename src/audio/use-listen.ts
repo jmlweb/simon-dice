@@ -27,6 +27,22 @@ type SpeechRecognitionErrorEventLike = {
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike
 
+export const ListenError = {
+  NOT_SUPPORTED: 'not-supported',
+  NOT_ALLOWED: 'not-allowed',
+  AUDIO_CAPTURE: 'audio-capture',
+  NO_SPEECH: 'no-speech',
+  NETWORK: 'network',
+  ABORTED: 'aborted',
+} as const
+
+export type ListenError = (typeof ListenError)[keyof typeof ListenError]
+
+export type ListenResult = {
+  alternatives: string[] | null
+  error: ListenError | null
+}
+
 const getCtor = (): SpeechRecognitionCtor | null => {
   if (typeof window === 'undefined') return null
   const w = window as unknown as {
@@ -38,10 +54,52 @@ const getCtor = (): SpeechRecognitionCtor | null => {
 
 export const isSpeechRecognitionSupported = getCtor() !== null
 
+const mapRecognitionError = (raw: string): ListenError => {
+  switch (raw) {
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return ListenError.NOT_ALLOWED
+    case 'audio-capture':
+      return ListenError.AUDIO_CAPTURE
+    case 'network':
+      return ListenError.NETWORK
+    case 'aborted':
+      return ListenError.ABORTED
+    default:
+      return ListenError.NO_SPEECH
+  }
+}
+
+// Pedir el permiso del micrófono explícitamente. SpeechRecognition lo solicita
+// implícitamente, pero en escritorio (Chrome/Edge) el prompt es a veces silenciado
+// y la API falla sin avisar. Forzando getUserMedia conseguimos un diálogo claro
+// y un error tipado si el usuario lo deniega o no hay micro.
+const ensureMicPermission = async (): Promise<ListenError | null> => {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return null
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream.getTracks().forEach((track) => track.stop())
+    return null
+  } catch (err) {
+    const name = (err as DOMException | undefined)?.name
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      return ListenError.NOT_ALLOWED
+    }
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+      return ListenError.AUDIO_CAPTURE
+    }
+    return ListenError.AUDIO_CAPTURE
+  }
+}
+
 export const useListen = (lang: string) => {
   const recRef = useRef<SpeechRecognitionLike | null>(null)
-  const resolveRef = useRef<((value: string[] | null) => void) | null>(null)
+  const resolveRef = useRef<((value: ListenResult) => void) | null>(null)
   const langRef = useRef(lang)
+  const permissionPromiseRef = useRef<Promise<ListenError | null> | null>(null)
+  const permissionErrorRef = useRef<ListenError | null>(null)
 
   useEffect(() => {
     langRef.current = lang
@@ -67,17 +125,29 @@ export const useListen = (lang: string) => {
       // ignore
     }
     if (resolveRef.current) {
-      resolveRef.current(null)
+      resolveRef.current({ alternatives: null, error: ListenError.ABORTED })
       resolveRef.current = null
     }
     recRef.current = null
   }, [])
 
-  const listen = useCallback((): Promise<string[] | null> => {
+  const listen = useCallback(async (): Promise<ListenResult> => {
     const Ctor = getCtor()
-    if (!Ctor) return Promise.resolve(null)
+    if (!Ctor) return { alternatives: null, error: ListenError.NOT_SUPPORTED }
 
-    return new Promise<string[] | null>((resolve) => {
+    if (permissionErrorRef.current) {
+      return { alternatives: null, error: permissionErrorRef.current }
+    }
+    if (!permissionPromiseRef.current) {
+      permissionPromiseRef.current = ensureMicPermission()
+    }
+    const permError = await permissionPromiseRef.current
+    if (permError) {
+      permissionErrorRef.current = permError
+      return { alternatives: null, error: permError }
+    }
+
+    return new Promise<ListenResult>((resolve) => {
       if (recRef.current) {
         try {
           recRef.current.abort()
@@ -92,7 +162,9 @@ export const useListen = (lang: string) => {
       rec.maxAlternatives = 5
 
       let settled = false
-      const settle = (value: string[] | null) => {
+      let pendingError: ListenError | null = null
+
+      const settle = (value: ListenResult) => {
         if (settled) return
         settled = true
         resolveRef.current = null
@@ -113,17 +185,28 @@ export const useListen = (lang: string) => {
             }
           }
         }
-        settle(candidates.length > 0 ? candidates : null)
+        settle({
+          alternatives: candidates.length > 0 ? candidates : null,
+          error: candidates.length > 0 ? null : ListenError.NO_SPEECH,
+        })
       }
-      rec.onerror = () => settle(null)
-      rec.onend = () => settle(null)
+      rec.onerror = (event) => {
+        const code = mapRecognitionError(event.error)
+        if (code === ListenError.NOT_ALLOWED || code === ListenError.AUDIO_CAPTURE) {
+          permissionErrorRef.current = code
+        }
+        pendingError = code
+      }
+      rec.onend = () => {
+        settle({ alternatives: null, error: pendingError ?? ListenError.NO_SPEECH })
+      }
 
       recRef.current = rec
       resolveRef.current = settle
       try {
         rec.start()
       } catch {
-        settle(null)
+        settle({ alternatives: null, error: ListenError.ABORTED })
       }
     })
   }, [])

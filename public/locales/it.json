@@ -33,6 +33,12 @@
     "winnerEnding": "Abbiamo un vincitore! Fine della partita.",
     "noWinnerEnding": "Nessuno è rimasto in piedi. Fine della partita."
   },
+  "voiceErrors": {
+    "micDenied": "Permesso del microfono negato. Tocca i pulsanti per rispondere.",
+    "micUnavailable": "Nessun microfono rilevato. Tocca i pulsanti per rispondere.",
+    "network": "Il riconoscitore vocale ha bisogno di internet. Tocca i pulsanti.",
+    "heardAs": "Ho sentito: «{transcript}». Tocca un pulsante se ho sbagliato."
+  },
   "actions": [
     "toccati il naso",
     "toccati l'orecchio sinistro",

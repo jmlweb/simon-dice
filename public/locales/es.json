@@ -33,6 +33,12 @@
     "winnerEnding": "¡Tenemos un ganador! Fin de la partida.",
     "noWinnerEnding": "Nadie ha quedado en pie. Fin de la partida."
   },
+  "voiceErrors": {
+    "micDenied": "Sin permiso del micrófono. Pulsa los botones para responder.",
+    "micUnavailable": "No detecto micrófono. Pulsa los botones para responder.",
+    "network": "El reconocedor de voz necesita internet. Pulsa los botones.",
+    "heardAs": "Oí: «{transcript}». Pulsa un botón si me equivoqué."
+  },
   "actions": [
     "tócate la nariz",
     "tócate la oreja izquierda",
@@ -73,7 +79,7 @@
     "nueve": 9, "nuebe": 9, "nuef": 9,
     "diez": 10, "dies": 10,
     "once": 11, "onse": 11,
-    "doce": 12, "dose": 12,
+    "doce": 12,
     "trece": 13, "trese": 13,
     "catorce": 14, "catorse": 14,
     "quince": 15, "quinse": 15, "kinse": 15,

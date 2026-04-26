@@ -33,6 +33,12 @@
     "winnerEnding": "我们有赢家了！游戏结束。",
     "noWinnerEnding": "没有人坚持下来。游戏结束。"
   },
+  "voiceErrors": {
+    "micDenied": "麦克风权限被拒绝。请点击按钮回答。",
+    "micUnavailable": "未检测到麦克风。请点击按钮回答。",
+    "network": "语音识别需要网络连接。请点击按钮。",
+    "heardAs": "我听到：「{transcript}」。如果不对请点击按钮。"
+  },
   "actions": [
     "摸鼻子",
     "摸左耳",

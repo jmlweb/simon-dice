@@ -6,7 +6,7 @@ import {
   playPlayerCountUpdate,
   playRoundTick,
 } from '../audio/sound-effects'
-import { isSpeechRecognitionSupported, useListen } from '../audio/use-listen'
+import { ListenError, isSpeechRecognitionSupported, useListen } from '../audio/use-listen'
 import { useSpeech } from '../audio/use-speech'
 import { SPEECH_TAGS, useI18n } from '../i18n'
 import { GamePhase, type EndOutcome, type Round } from '../shared/types'
@@ -77,18 +77,47 @@ export const useGame = () => {
 
   const askForAnswer = useCallback(
     async (max: number, session: number): Promise<number | null> => {
+      type VoiceOutcome =
+        | { kind: 'parsed'; value: number }
+        | { kind: 'unparsed'; transcript: string }
+        | { kind: 'fatal'; error: ListenError }
+        | { kind: 'retry' }
+
+      const fatalErrors: ReadonlyArray<ListenError> = [
+        ListenError.NOT_ALLOWED,
+        ListenError.AUDIO_CAPTURE,
+        ListenError.NETWORK,
+        ListenError.NOT_SUPPORTED,
+      ]
+
+      const fatalFeedback = (error: ListenError): string | null => {
+        const messages = translationsRef.current.voiceErrors
+        if (error === ListenError.NOT_ALLOWED) return messages.micDenied
+        if (error === ListenError.AUDIO_CAPTURE) return messages.micUnavailable
+        if (error === ListenError.NETWORK) return messages.network
+        return null
+      }
+
       for (let attempt = 0; attempt < VOICE_RETRY_LIMIT; attempt++) {
         if (!isAlive(session)) return null
 
         const numberWords = translationsRef.current.numberWords
-        const voicePromise: Promise<number | null> = isSpeechRecognitionSupported
-          ? listen().then((alts) => {
-              if (!alts) return null
-              for (const transcript of alts) {
-                const n = parseNumber(transcript, max, numberWords)
-                if (n !== null) return n
+        const voicePromise: Promise<VoiceOutcome> = isSpeechRecognitionSupported
+          ? listen().then((result) => {
+              if (result.alternatives) {
+                for (const transcript of result.alternatives) {
+                  const n = parseNumber(transcript, max, numberWords)
+                  if (n !== null) return { kind: 'parsed', value: n } as VoiceOutcome
+                }
+                return {
+                  kind: 'unparsed',
+                  transcript: result.alternatives[0],
+                } as VoiceOutcome
               }
-              return null
+              if (result.error && fatalErrors.includes(result.error)) {
+                return { kind: 'fatal', error: result.error } as VoiceOutcome
+              }
+              return { kind: 'retry' } as VoiceOutcome
             })
           : new Promise(() => {})
 
@@ -105,11 +134,30 @@ export const useGame = () => {
           return result
         }
 
-        if (attempt < VOICE_RETRY_LIMIT - 1 && isSpeechRecognitionSupported) {
-          const msg = translationsRef.current.speech.notUnderstood
-          setState((s) => ({ ...s, voiceFeedback: msg }))
-          await speak(msg)
-          if (!isAlive(session)) return null
+        if (typeof result === 'object' && 'kind' in result) {
+          if (result.kind === 'parsed') return result.value
+
+          if (result.kind === 'fatal') {
+            const msg = fatalFeedback(result.error)
+            stopListen()
+            setState((s) => ({
+              ...s,
+              voiceListening: false,
+              voiceFeedback: msg,
+            }))
+            break
+          }
+
+          if (attempt < VOICE_RETRY_LIMIT - 1) {
+            const messages = translationsRef.current.voiceErrors
+            const heard =
+              result.kind === 'unparsed'
+                ? messages.heardAs.replace('{transcript}', result.transcript)
+                : translationsRef.current.speech.notUnderstood
+            setState((s) => ({ ...s, voiceFeedback: heard }))
+            await speak(translationsRef.current.speech.notUnderstood)
+            if (!isAlive(session)) return null
+          }
         }
       }
 

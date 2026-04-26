@@ -13,9 +13,33 @@ type Props = {
   onStart: (players: number) => void
 }
 
+const PLAYERS_STORAGE_KEY = 'simon-dice:players'
+const DEFAULT_PLAYERS = '4'
+
+const readSavedPlayers = (): string => {
+  if (typeof window === 'undefined') return DEFAULT_PLAYERS
+  try {
+    const saved = window.localStorage.getItem(PLAYERS_STORAGE_KEY)
+    if (!saved) return DEFAULT_PLAYERS
+    const parsed = Number(saved)
+    if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 30) return saved
+  } catch {
+    // localStorage unavailable (private mode / SSR)
+  }
+  return DEFAULT_PLAYERS
+}
+
+const persistPlayers = (players: number) => {
+  try {
+    window.localStorage.setItem(PLAYERS_STORAGE_KEY, String(players))
+  } catch {
+    // ignore
+  }
+}
+
 export const StartScreen = ({ onStart }: Props) => {
   const { t, translations, locale, setLocale } = useI18n()
-  const [value, setValue] = useState('4')
+  const [value, setValue] = useState(readSavedPlayers)
   const trimmed = value.trim()
   const parsed = Number(trimmed)
   const isValid = trimmed !== '' && Number.isInteger(parsed) && parsed >= 1 && parsed <= 30
@@ -23,6 +47,7 @@ export const StartScreen = ({ onStart }: Props) => {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!isValid) return
+    persistPlayers(parsed)
     onStart(parsed)
   }
 

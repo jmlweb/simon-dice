@@ -66,6 +66,12 @@ export type Translations = {
     winnerEnding: string
     noWinnerEnding: string
   }
+  voiceErrors: {
+    micDenied: string
+    micUnavailable: string
+    network: string
+    heardAs: string
+  }
   actions: string[]
   numberWords: Record<string, number>
 }
